@@ -1,0 +1,134 @@
+package com.luisbaquiax.emuladordb.parser;
+
+import com.luisbaquiax.emuladordb.lexer.InstrucionesLexer;
+import java_cup.runtime.*;
+
+parser code {:
+
+
+    // Connect this parser to a scanner!
+    public InstruccionesParser(InstrucionesLexer lex) {
+	    super(lex);
+	  }
+private Symbol s;
+public void syntax_error(Symbol cur_token) {
+            this.s = cur_token;
+            String cadena = cur_token.value.toString();
+            int linea = cur_token.left;
+            int col = cur_token.right;
+            System.out.print("Error aca > value " + cadena);
+            System.out.print(" Linea " + linea);
+            System.out.println(" Columna " + col);
+            if (expected_token_ids().isEmpty()) {
+                System.out.println("ya no se esperaba ningun simbolo");
+            }
+        }
+public Symbol getSim(){
+    return this.s;
+}
+
+public void unrecovered_syntax_error(Symbol cur_token) {
+            System.out.println("Error irrecuperable sobrecargado");
+        }
+:}
+
+/* Terminals (tokens returned by the scanner). */
+terminal String     SELECCIONAR, INSERTAR, ELIMINAR, ACTUALIZAR, FILTRAR, EN, AND, OR;
+terminal String     CADENA, ID, ARCHIVO, VALORES, ASIGNAR;
+terminal int        ENTERO;
+terminal double     DECIMAL;
+terminal String     SIG_IGUAL, SIG_MENOR, SIG_MAYOR, SIG_MENOR_QUE, SIG_MAYOR_QUE;
+terminal String     SIG_DIFERENTE, PCOMA, PUNTO, COMA, ASTERISCO, PARENA, PARENC;
+
+
+/* Non-terminals */
+non terminal        instruccion, select, insert, update, delete, lista_columnas, ruta_archivo;
+non terminal        condiciones, value_list, next_file, and_or, numero, signos, and, or;
+non terminal        op_select, lista_valores, valores, end_lista_valores, update_list, end_up_list;
+
+/* The grammar */
+
+start with instruccion;
+
+instruccion     ::= select PCOMA
+                    | insert PCOMA
+                    | update PCOMA
+                    | delete PCOMA
+                    ;
+
+//--------> seleccionar
+select          ::= SELECCIONAR op_select
+                    ;
+
+op_select       ::= lista_columnas EN ruta_archivo condiciones
+                    | ASTERISCO EN ruta_archivo condiciones
+                    ;
+
+//--------> insertar
+insert          ::= INSERTAR EN ruta_archivo PARENA lista_columnas PARENC VALORES PARENA lista_valores PARENC
+                    | INSERTAR EN ruta_archivo VALORES PARENA lista_valores PARENC
+                    ;
+
+//--------> actualizar
+update          ::= ACTUALIZAR EN ruta_archivo ASIGNAR update_list condiciones;
+
+update_list     ::= ID SIG_IGUAL valores end_up_list;
+
+end_up_list     ::= COMA update_list
+                    |
+                    ;
+
+//--------> eliminar
+delete          ::= ELIMINAR EN ruta_archivo condiciones;
+
+lista_columnas  ::= ID value_list;
+
+value_list      ::= COMA lista_columnas
+                    | /* Nada */
+                    ;
+
+ruta_archivo    ::= ID next_file;
+
+next_file       ::= PUNTO ruta_archivo
+                    | /* Nada */
+                    ;
+
+condiciones     ::= FILTRAR ID SIG_IGUAL CADENA and_or
+                    | FILTRAR ID signos numero and_or
+                    | /* Nada */
+                    ;
+
+and_or          ::=  and
+                    | or
+                    ;
+
+and             ::= AND ID SIG_IGUAL CADENA and
+                    | AND ID signos numero and
+                    ;
+
+or              ::= OR ID SIG_IGUAL CADENA or
+                    | OR ID signos numero or
+                    ;
+
+signos          ::= SIG_MAYOR
+                    | SIG_MAYOR_QUE
+                    | SIG_MENOR
+                    | SIG_MENOR_QUE
+                    | SIG_DIFERENTE
+                    | SIG_IGUAL
+                    ;
+
+lista_valores   ::= valores end_lista_valores
+                    ;
+
+end_lista_valores   ::= COMA lista_valores
+                        |
+                        ;
+
+valores         ::= CADENA
+                    | numero
+                    ;
+
+numero          ::= ENTERO
+                    | DECIMAL
+                    ;

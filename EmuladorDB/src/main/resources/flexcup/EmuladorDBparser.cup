@@ -1,0 +1,70 @@
+package com.luisbaquiax.emuladordb.parser;
+
+import com.luisbaquiax.emuladordb.lexer.EmuladorDBLexer;
+import java_cup.runtime.*;
+
+
+parser code {:
+    // Connect this parser to a scanner!
+    public EmuladorDBparser(EmuladorDBLexer lex) {
+	    super(lex);
+	  }
+private Symbol s;
+public void syntax_error(Symbol cur_token) {
+            this.s = cur_token;
+            String cadena = cur_token.value.toString();
+            int linea = cur_token.left;
+            int col = cur_token.right;
+            System.out.print("value " + cadena);
+            System.out.print(" Linea " + linea);
+            System.out.println(" Columna " + col);
+            if (expected_token_ids().isEmpty()) {
+                System.out.println("ya no se esperaba ningun simbolo");
+            }
+        }
+public Symbol getSim(){
+    return this.s;
+}
+/*
+public void unrecovered_syntax_error(Symbol cur_token) {
+            System.out.println("Error irrecuperable sobrecargado");
+        }*/
+:}
+
+/* Terminals (tokens returned by the scanner). */
+terminal    PROYECTO, CARPETA, ARCHIVO, NOMBRE, COMILLA,
+            UBICACION, DIAGONAL, NOMBRE_ARCHIVO, SIGNO_IGUAL, MENOR,
+            MAYOR;
+
+/* Non-terminals */
+non terminal        content, header, body, footer,
+                    ruta, file, carpeta, carpeta_header,
+                    carpeta_content, carpeta_footer;
+
+
+/* The grammar */
+
+start with content;
+
+content ::= header body footer;
+
+header  ::= MENOR PROYECTO NOMBRE SIGNO_IGUAL COMILLA ruta COMILLA MAYOR;
+
+body    ::= file
+           | carpeta
+           ;
+file    ::= MENOR ARCHIVO NOMBRE SIGNO_IGUAL COMILLA ruta COMILLA UBICACION SIGNO_IGUAL COMILLA ruta COMILLA DIAGONAL MAYOR;
+
+carpeta ::= carpeta_header carpeta_content carpeta_footer;
+
+carpeta_header ::= MENOR CARPETA NOMBRE SIGNO_IGUAL COMILLA NOMBRE_ARCHIVO COMILLA MAYOR;
+
+carpeta_content ::= carpeta
+                   | file
+                   ;
+
+carpeta_footer  ::= MENOR DIAGONAL CARPETA MAYOR;
+
+footer          ::= MENOR DIAGONAL PROYECTO MAYOR;
+
+ruta            ::= NOMBRE_ARCHIVO;

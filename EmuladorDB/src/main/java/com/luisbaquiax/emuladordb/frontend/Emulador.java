@@ -2,19 +2,27 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
-package com.luisbaquiax.emuladordb;
+package com.luisbaquiax.emuladordb.frontend;
 
+import com.luisbaquiax.emuladordb.lexer.InstrucionesLexer;
+import com.luisbaquiax.emuladordb.parser.ErrorSintactico;
+import com.luisbaquiax.emuladordb.parser.InstruccionesParser;
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.ScrollPane;
 import java.awt.TextArea;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.StringReader;
 import java.nio.file.Path;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -50,27 +58,32 @@ public class Emulador extends javax.swing.JFrame {
     private String rutaPrincipal;
 
     private JScrollPane scrollPane1;
-    private JTabbedPane tabPane;
+    private JTabbedPane tabPaneFiles;
     private JTabbedPane tabPaneResultado;
-    private JTextArea txtResultado;
-    private JTextArea jTextArea1;
+    private JTextArea txtAreaConsole;
+    private JTextArea txtAreaConsultas;
     private JScrollPane scroll2;
     private JPanel panelResultado;
     private JSplitPane splitPaneInner;
     private JSplitPane splitPaneInner2;
     private JSplitPane splitPane;
-    private JTextArea textArea;
+    private JTextArea txtAreaFiles;
     private String path = "";
-    
-    public static final String EXTENSION=".csv";
+    private String pathAbsolute;
+
+    public static final String EXTENSION = ".csv";
 
     private boolean crearProyecto;
+
+    private InstrucionesLexer lexer;
+    private InstruccionesParser parser;
 
     /**
      * Creates new form Emulador
      */
     public Emulador() {
         initComponents();
+        setLocationRelativeTo(null);
         rutaPrincipal = "";
         initTree();
         crearProyecto = false;
@@ -84,24 +97,26 @@ public class Emulador extends javax.swing.JFrame {
         tree.setBorder(b1);
         JScrollPane treeScrollPane = new JScrollPane(tree);
 
-        textArea = new JTextArea();
-        JScrollPane scrollText = new JScrollPane(textArea);
+        txtAreaFiles = new JTextArea();
+        JScrollPane scrollText = new JScrollPane(txtAreaFiles);
 
-        tabPane = new JTabbedPane();
-        tabPane.add(scrollText);
+        tabPaneFiles = new JTabbedPane();
+        tabPaneFiles.add(scrollText);
 
-        jTextArea1 = new JTextArea();
-        scroll2 = new JScrollPane(jTextArea1);
+        txtAreaConsultas = new JTextArea();
+        Border b2 = BorderFactory.createTitledBorder("<SQL> Area de consultas");
+        txtAreaConsultas.setBorder(b2);
+        scroll2 = new JScrollPane(txtAreaConsultas);
 
         panelResultado = new JPanel();
 
         tabPaneResultado = new JTabbedPane();
-        txtResultado = new JTextArea();
-        JScrollPane scrolTxtResultado = new JScrollPane(txtResultado);
+        txtAreaConsole = new JTextArea();
+        JScrollPane scrolTxtResultado = new JScrollPane(txtAreaConsole);
         tabPaneResultado.addTab("Resultado consulta", scrolTxtResultado);
         tabPaneResultado.addTab("Tabla de resultadoss", new JTextArea());
 
-        splitPaneInner = new JSplitPane(JSplitPane.VERTICAL_SPLIT, tabPane, scroll2);
+        splitPaneInner = new JSplitPane(JSplitPane.VERTICAL_SPLIT, tabPaneFiles, scroll2);
         splitPaneInner.setDividerLocation(200);
 
         splitPaneInner2 = new JSplitPane(JSplitPane.VERTICAL_SPLIT, splitPaneInner, tabPaneResultado);
@@ -109,6 +124,17 @@ public class Emulador extends javax.swing.JFrame {
 
         splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, treeScrollPane, splitPaneInner2);
         splitPane.setDividerLocation(300);
+
+        //-------------- ACCIONES DEL AREA DE TEXTO DE CONSULTAS -------------------//
+        txtAreaConsultas.addKeyListener(new KeyAdapter() {
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                txtAreaConsultasKyeReleased(e);
+            }
+
+        });
+        //-------------- ACCIONES DEL AREA DE TEXTO DE CONSULTAS -------------------//
 
         tree.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
@@ -119,7 +145,7 @@ public class Emulador extends javax.swing.JFrame {
                     if (path != null) {
                         DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) path.getLastPathComponent();
                         System.out.println("ruta " + rutaPrincipal + getSelectedNodePath(selectedNode));
-                        String pathAbsolute = "";
+                        pathAbsolute = "";
                         pathAbsolute += rutaPrincipal + getSelectedNodePath(selectedNode);
                         if (selectedNode != null) {
                             File file = new File(pathAbsolute);
@@ -163,6 +189,9 @@ public class Emulador extends javax.swing.JFrame {
         mentuItemOpenProyect = new javax.swing.JMenuItem();
         menuItemCreate = new javax.swing.JMenuItem();
         menuLexico = new javax.swing.JMenu();
+        mentuItemReportTokens = new javax.swing.JMenuItem();
+        menuSintáctico = new javax.swing.JMenu();
+        menuItemReportSintactico = new javax.swing.JMenuItem();
         jMenu2 = new javax.swing.JMenu();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -171,7 +200,7 @@ public class Emulador extends javax.swing.JFrame {
         panelContent.setLayout(panelContentLayout);
         panelContentLayout.setHorizontalGroup(
             panelContentLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 609, Short.MAX_VALUE)
+            .addGap(0, 769, Short.MAX_VALUE)
         );
         panelContentLayout.setVerticalGroup(
             panelContentLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -199,9 +228,45 @@ public class Emulador extends javax.swing.JFrame {
         jMenuBar1.add(jMenu1);
 
         menuLexico.setText("Reporte lexico");
+
+        mentuItemReportTokens.setText("Reporte de tokens");
+        mentuItemReportTokens.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                mentuItemReportTokensMouseClicked(evt);
+            }
+        });
+        mentuItemReportTokens.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mentuItemReportTokensActionPerformed(evt);
+            }
+        });
+        menuLexico.add(mentuItemReportTokens);
+
         jMenuBar1.add(menuLexico);
 
+        menuSintáctico.setText("Reporte sintáctico");
+
+        menuItemReportSintactico.setText("Errores sintácticos");
+        menuItemReportSintactico.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                menuItemReportSintacticoMouseClicked(evt);
+            }
+        });
+        menuItemReportSintactico.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                menuItemReportSintacticoActionPerformed(evt);
+            }
+        });
+        menuSintáctico.add(menuItemReportSintactico);
+
+        jMenuBar1.add(menuSintáctico);
+
         jMenu2.setText("App info");
+        jMenu2.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                jMenu2MouseClicked(evt);
+            }
+        });
         jMenuBar1.add(jMenu2);
 
         setJMenuBar(jMenuBar1);
@@ -238,6 +303,50 @@ public class Emulador extends javax.swing.JFrame {
         crearProyecto = true;
         createProyect();
     }//GEN-LAST:event_menuItemCreateActionPerformed
+
+    private void menuItemReportSintacticoMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_menuItemReportSintacticoMouseClicked
+        // TODO add your handling code here:
+        if (parser != null) {
+            Report report = new Report(parser, lexer);
+            report.getTabbPane().setSelectedIndex(1);
+            report.llenarTablas();
+            report.setVisible(true);
+        }
+    }//GEN-LAST:event_menuItemReportSintacticoMouseClicked
+
+    private void mentuItemReportTokensMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_mentuItemReportTokensMouseClicked
+        // TODO add your handling code here:
+
+    }//GEN-LAST:event_mentuItemReportTokensMouseClicked
+
+    private void jMenu2MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jMenu2MouseClicked
+        // TODO add your handling code here:
+        JOptionPane.showMessageDialog(null, """
+                                            Autor: Luis Baquiax
+                                            Curso: Organización de lenguajes y Compiladores 1
+                                            Año: 2024
+                                            """);
+    }//GEN-LAST:event_jMenu2MouseClicked
+
+    private void mentuItemReportTokensActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mentuItemReportTokensActionPerformed
+        // TODO add your handling code here:
+        System.out.println("hola");
+        Report report = new Report(parser, lexer);
+        report.getTabbPane().setSelectedIndex(0);
+        report.llenarTablas();
+        report.setVisible(true);
+    }//GEN-LAST:event_mentuItemReportTokensActionPerformed
+
+    private void menuItemReportSintacticoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_menuItemReportSintacticoActionPerformed
+        // TODO add your handling code here:
+        if (parser != null) {
+            System.out.println("hola");
+            Report report = new Report(parser, lexer);
+            report.getTabbPane().setSelectedIndex(1);
+            report.llenarTablas();
+            report.setVisible(true);
+        }
+    }//GEN-LAST:event_menuItemReportSintacticoActionPerformed
 
     private String getSelectedNodePath(DefaultMutableTreeNode selectedNode) {
         StringBuilder path = new StringBuilder();
@@ -299,20 +408,26 @@ public class Emulador extends javax.swing.JFrame {
 
     private void openFile(DefaultMutableTreeNode selectedNode) {
         String filePath = selectedNode.getUserObject().toString();
-        jTextArea1.setText(""); // Limpiar el área de texto
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                jTextArea1.append(line + "\n");
+        txtAreaFiles.setText(""); // Limpiar el área de texto
+        BufferedReader br;
+        getSelectedNodePath(selectedNode);
+        try {
+            StringBuffer buffer = new StringBuffer();
+            br = new BufferedReader(new FileReader(pathAbsolute));
+            while (br.ready()) {
+                buffer.append(br.readLine());
             }
-            System.out.println("Ruta absoluta del archivo: " + filePath);
+            txtAreaFiles.setText(new String(buffer));
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(Emulador.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
-            ex.printStackTrace();
+            Logger.getLogger(Emulador.class.getName()).log(Level.SEVERE, null, ex);
         }
+
     }
 
     private void createFolder() {
-        crearProyecto=false;
+        crearProyecto = false;
         DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
         if (selectedNode != null) {
             String folderName = JOptionPane.showInputDialog("Ingrese el nombre de la carpeta:");
@@ -436,16 +551,51 @@ public class Emulador extends javax.swing.JFrame {
         }
     }
 
-    public static void main(String[] args) {
-        new Emulador().setVisible(true);
+    private void txtAreaConsultasKyeReleased(KeyEvent e) {
+        try {
+            if (e.getKeyCode() == 10) {
+                String txt = txtAreaConsultas.getText().strip();
+                if (txt.substring(txt.length() - 1).equals(";")) {
+                    System.out.println("bien");
+                    lexer = new InstrucionesLexer(new StringReader(txtAreaConsultas.getText()));
+                    parser = new InstruccionesParser(lexer);
+                    try {
+                        parser.parse();
+                    } catch (Exception ex) {
+                        Logger.getLogger(Emulador.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                    if (!parser.errores.isEmpty()) {
+                        String info = "";
+                        for (ErrorSintactico es : parser.errores) {
+                            info += es.toString();
+                        }
+                        txtAreaConsole.setForeground(Color.red);
+                        txtAreaConsole.setText(info);
+                    } else {
+                        txtAreaConsole.setForeground(Color.black);
+                        txtAreaConsole.setText("Todo bien.");
+                    }
+                }
+            }
+        } catch (Exception xe) {
+            System.out.println(xe.getMessage());
+        }
+
     }
+
+//    public static void main(String[] args) {
+//        new Emulador().setVisible(true);
+//    }
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JMenu jMenu1;
     private javax.swing.JMenu jMenu2;
     private javax.swing.JMenuBar jMenuBar1;
     private javax.swing.JMenuItem mentuItemOpenProyect;
+    private javax.swing.JMenuItem mentuItemReportTokens;
     private javax.swing.JMenuItem menuItemCreate;
+    private javax.swing.JMenuItem menuItemReportSintactico;
     private javax.swing.JMenu menuLexico;
+    private javax.swing.JMenu menuSintáctico;
     private javax.swing.JPanel panelContent;
     // End of variables declaration//GEN-END:variables
 

@@ -47,6 +47,10 @@ public ArrayList<Symbol> tokens = new ArrayList<>();
     return new Symbol(type, yyline+1, yycolumn+1, value);
   }
 
+  private Symbol symbol(int type, Object value, int row, int col) {
+      return new Symbol(type, row+1, col+1, value);
+    }
+
 
   private void error(String message) {
     System.out.println("Error en linea line "+(yyline+1)+", columna "+(yycolumn+1)+" : "+message);
@@ -68,6 +72,10 @@ public ArrayList<Symbol> tokens = new ArrayList<>();
         "ACTUALIZAR"	{System.out.println("lexema:" +yytext()+  " linea: " +yyline+" columna: "+yycolumn);
                           tokens.add(new Symbol(sym.ACTUALIZAR, yytext()));
                          return symbol(sym.ACTUALIZAR, yytext()); }
+
+        "ELIMINAR"  	{System.out.println("lexema:" +yytext()+  " linea: " +yyline+" columna: "+yycolumn);
+                         tokens.add(new Symbol(sym.ELIMINAR, yytext()));
+                         return symbol(sym.ELIMINAR, yytext()); }
 
         "FILTRAR"       {System.out.println("lexema:" +yytext()+  " linea: " +yyline+" columna: "+yycolumn);
                          tokens.add(new Symbol(sym.FILTRAR, yytext()));

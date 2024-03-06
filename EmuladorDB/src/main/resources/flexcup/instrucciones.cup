@@ -2,6 +2,7 @@ package com.luisbaquiax.emuladordb.parser;
 
 import com.luisbaquiax.emuladordb.lexer.InstrucionesLexer;
 import java_cup.runtime.*;
+import java.util.ArrayList;
 
 parser code {:
 
@@ -11,14 +12,19 @@ parser code {:
 	    super(lex);
 	  }
 private Symbol s;
-public void syntax_error(Symbol cur_token) {
+
+public ArrayList<ErrorSintactico> errores = new ArrayList<>();
+
+public void syntax_error(Symbol c) {
             this.s = cur_token;
-            String cadena = cur_token.value.toString();
-            int linea = cur_token.left;
-            int col = cur_token.right;
+            String cadena = c.value.toString();
+            int linea = c.left;
+            int col = c.right;
             System.out.print("Error aca > value " + cadena);
             System.out.print(" Linea " + linea);
             System.out.println(" Columna " + col);
+            errores.add(new ErrorSintactico(cadena, linea, col, "Error sintáctico"));
+
             if (expected_token_ids().isEmpty()) {
                 System.out.println("ya no se esperaba ningun simbolo");
             }
@@ -27,7 +33,7 @@ public Symbol getSim(){
     return this.s;
 }
 
-public void unrecovered_syntax_error(Symbol cur_token) {
+public void unrecovered_syntax_error(Symbol c) {
             System.out.println("Error irrecuperable sobrecargado");
         }
 :}
@@ -122,7 +128,7 @@ lista_valores   ::= valores end_lista_valores
                     ;
 
 end_lista_valores   ::= COMA lista_valores
-                        |
+                        | /* Nada */
                         ;
 
 valores         ::= CADENA

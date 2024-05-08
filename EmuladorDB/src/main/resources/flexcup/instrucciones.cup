@@ -13,7 +13,17 @@ parser code {:
 	  }
 private Symbol s;
 
+public ArrayList<Condicion> condicionesSql = new ArrayList<>();
+
+public ArrayList<Columna> columnas = new ArrayList<>();
+
 public ArrayList<ErrorSintactico> errores = new ArrayList<>();
+
+public Select sqlSelect = new Select();
+
+public String fileRuta = "";
+
+public String ruta = "";
 
 public void syntax_error(Symbol c) {
             this.s = cur_token;
@@ -23,8 +33,9 @@ public void syntax_error(Symbol c) {
             System.out.print("Error aca > value " + cadena);
             System.out.print(" Linea " + linea);
             System.out.println(" Columna " + col);
-            errores.add(new ErrorSintactico(cadena, linea, col, "Error sintáctico"));
-
+            if(!cadena.equals(";")){
+                 errores.add(new ErrorSintactico(cadena, linea, col, "Error sintáctico"));
+            }
             if (expected_token_ids().isEmpty()) {
                 System.out.println("ya no se esperaba ningun simbolo");
             }
@@ -48,26 +59,41 @@ terminal String     SIG_DIFERENTE, PCOMA, PUNTO, COMA, ASTERISCO, PARENA, PARENC
 
 
 /* Non-terminals */
-non terminal        instruccion, select, insert, update, delete, lista_columnas, ruta_archivo;
-non terminal        condiciones, value_list, next_file, and_or, numero, signos, and, or;
-non terminal        op_select, lista_valores, valores, end_lista_valores, update_list, end_up_list;
+non terminal            instruccion;
+non terminal Select     select;
+non terminal            insert, update, delete, lista_columnas;
+non terminal String     ruta_archivo;
+non terminal            signos, and, or;
+non terminal            condiciones, value_list;
+non terminal String     next_file;
+non terminal            and_or, numero;
+non terminal            op_select, lista_valores, valores, end_lista_valores, update_list, end_up_list;
 
 /* The grammar */
 
 start with instruccion;
 
-instruccion     ::= select PCOMA
+instruccion     ::= select:seleccionar PCOMA
+                    {:
+                    //
+                    :}
                     | insert PCOMA
                     | update PCOMA
                     | delete PCOMA
                     ;
 
 //--------> seleccionar
-select          ::= SELECCIONAR op_select
+select          ::= SELECCIONAR op_select:opSelect
+                    {:
+                        RESULT = opSelect;
+                    :}
                     ;
 
-op_select       ::= lista_columnas EN ruta_archivo condiciones
-                    | ASTERISCO EN ruta_archivo condiciones
+op_select       ::= lista_columnas EN ruta_archivo:ruta condiciones
+                    {:
+                        //
+                    :}
+                    | ASTERISCO EN ruta_archivo:ruta condiciones
                     ;
 
 //--------> insertar
@@ -85,7 +111,8 @@ end_up_list     ::= COMA update_list
                     ;
 
 //--------> eliminar
-delete          ::= ELIMINAR EN ruta_archivo condiciones;
+delete          ::= ELIMINAR EN ruta_archivo:rutaString condiciones
+                    ;
 
 lista_columnas  ::= ID value_list;
 
@@ -93,9 +120,23 @@ value_list      ::= COMA lista_columnas
                     | /* Nada */
                     ;
 
-ruta_archivo    ::= ID next_file;
+ruta_archivo    ::= ID:id next_file:nextFile
+                    {:
+                        String ruta = "";
+                        ruta += id + nextFile;
+                        RESULT = ruta;
+                        System.out.println("next file: "+ruta);
 
-next_file       ::= PUNTO ruta_archivo
+                    :}
+                    | ARCHIVO:arch next_file {: System.out.println("nombre-archivo: "+arch); RESULT+=arch; :}
+                    ;
+
+next_file       ::= PUNTO:varPunto ruta_archivo:ruta
+                    {:
+                        String puntoRuta = "";
+                        puntoRuta += varPunto +ruta;
+                        RESULT = puntoRuta;
+                    :}
                     | /* Nada */
                     ;
 

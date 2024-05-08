@@ -134,42 +134,9 @@ public class Emulador extends javax.swing.JFrame {
             }
 
         });
-        //-------------- ACCIONES DEL AREA DE TEXTO DE CONSULTAS -------------------//
+        //-------------- acciones para el tree -------------------//
 
-        tree.addMouseListener(new MouseAdapter() {
-            public void mouseClicked(MouseEvent e) {
-                if (SwingUtilities.isRightMouseButton(e)) {
-                    int fila = tree.getClosestRowForLocation(e.getX(), e.getY());
-                    tree.setSelectionRow(fila);
-                    TreePath path = tree.getSelectionPath();
-                    if (path != null) {
-                        DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) path.getLastPathComponent();
-                        System.out.println("ruta " + rutaPrincipal + getSelectedNodePath(selectedNode));
-                        pathAbsolute = "";
-                        pathAbsolute += rutaPrincipal + getSelectedNodePath(selectedNode);
-                        if (selectedNode != null) {
-                            File file = new File(pathAbsolute);
-                            System.out.println("entro");
-                            if (crearProyecto == true) {
-                                showFolderPopupMenu(e.getX(), e.getY());
-                            } else {
-                                if (file.isDirectory()) {
-                                    showFolderPopupMenu(e.getX(), e.getY());
-                                } else {
-                                    showFilePopupMenu(e.getX(), e.getY());
-                                }
-                            }
-
-                        }
-                    }
-                } else if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
-                    DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
-                    if (selectedNode != null && !selectedNode.getAllowsChildren()) {
-                        openFile(selectedNode);
-                    }
-                }
-            }
-        });
+        verArbol();
         panelContent.setLayout(new BorderLayout());
         panelContent.add(splitPane, BorderLayout.CENTER);
     }
@@ -348,6 +315,43 @@ public class Emulador extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_menuItemReportSintacticoActionPerformed
 
+    private void verArbol() {
+        tree.addMouseListener(new MouseAdapter() {
+            public void mouseClicked(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    int fila = tree.getClosestRowForLocation(e.getX(), e.getY());
+                    tree.setSelectionRow(fila);
+                    TreePath path = tree.getSelectionPath();
+                    if (path != null) {
+                        DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) path.getLastPathComponent();
+                        System.out.println("ruta " + rutaPrincipal + getSelectedNodePath(selectedNode));
+                        pathAbsolute = "";
+                        pathAbsolute += rutaPrincipal + getSelectedNodePath(selectedNode);
+                        if (selectedNode != null) {
+                            File file = new File(pathAbsolute);
+                            System.out.println("entro");
+                            if (crearProyecto == true) {
+                                showFolderPopupMenu(e.getX(), e.getY());
+                            } else {
+                                if (file.isDirectory()) {
+                                    showFolderPopupMenu(e.getX(), e.getY());
+                                } else {
+                                    showFilePopupMenu(e.getX(), e.getY());
+                                }
+                            }
+
+                        }
+                    }
+                } else if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
+                    DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
+                    if (selectedNode != null && !selectedNode.getAllowsChildren()) {
+                        openFile(selectedNode);
+                    }
+                }
+            }
+        });
+    }
+
     private String getSelectedNodePath(DefaultMutableTreeNode selectedNode) {
         StringBuilder path = new StringBuilder();
         TreeNode[] pathNodes = selectedNode.getPath();
@@ -384,6 +388,20 @@ public class Emulador extends javax.swing.JFrame {
         });
         popupMenu.add(createFileItem);
 
+        JMenuItem deletFolder = new JMenuItem("Eliminar carpeta");
+        deletFolder.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
+                if (selectedNode != null) {
+                    deleteFileOrDirectory(selectedNode);
+                }
+            }
+
+        });
+
+        popupMenu.add(deletFolder);
+
         popupMenu.show(tree, x, y);
 
     }
@@ -401,27 +419,59 @@ public class Emulador extends javax.swing.JFrame {
                 }
             }
         });
-        popupMenu.add(openItem);
+        JMenuItem delteFile = new JMenuItem("Eliminar archivo");
+        delteFile.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
+                if (selectedNode != null) {
+                    deleteFileOrDirectory(selectedNode);
+                }
+            }
 
+        });
+        popupMenu.add(openItem);
+        popupMenu.add(delteFile);
         popupMenu.show(tree, x, y);
     }
 
     private void openFile(DefaultMutableTreeNode selectedNode) {
-        String filePath = selectedNode.getUserObject().toString();
         txtAreaFiles.setText(""); // Limpiar el área de texto
         BufferedReader br;
-        getSelectedNodePath(selectedNode);
         try {
             StringBuffer buffer = new StringBuffer();
             br = new BufferedReader(new FileReader(pathAbsolute));
+            String auxi = "";
             while (br.ready()) {
-                buffer.append(br.readLine());
+                auxi += br.readLine() + "\n";
             }
+            buffer.append(auxi);
             txtAreaFiles.setText(new String(buffer));
         } catch (FileNotFoundException ex) {
             Logger.getLogger(Emulador.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
             Logger.getLogger(Emulador.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+
+    private void deleteFileOrDirectory(DefaultMutableTreeNode selectedNode) {
+        System.out.printf("pathAbsolute %s\n", pathAbsolute);
+        System.out.printf("ruta principal %s\n", rutaPrincipal);
+        File fileDelete = new File(pathAbsolute);
+        if (fileDelete.isDirectory()) {
+            File[] files = fileDelete.listFiles();
+            for (int i = 0; i < files.length; i++) {
+                files[i].delete();
+            }
+            fileDelete.delete();
+            treeModel.removeNodeFromParent(selectedNode);
+        } else {
+            if (fileDelete.delete()) {
+                treeModel.removeNodeFromParent(selectedNode);
+            } else {
+                System.out.println("no se pudo eleminar el archivo");
+            }
         }
 
     }

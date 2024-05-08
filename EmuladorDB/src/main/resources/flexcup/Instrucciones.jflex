@@ -121,11 +121,7 @@ public ArrayList<Symbol> tokens = new ArrayList<>();
 
         {identificador}     {System.out.println("lexema:" +yytext()+  " linea: " +yyline+" columna: "+yycolumn);
                              tokens.add(new Symbol(sym.ID, yytext()));
-                            return symbol(sym.ID, yytext()); }
-
-	    {nombreArchivo}	{System.out.println("lexema:" +yytext()+  " linea: " +yyline+" columna: "+yycolumn);
-	                     tokens.add(new Symbol(sym.ARCHIVO, yytext()));
-                         return symbol(sym.ARCHIVO, yytext()); }
+                            return symbol(sym.ID, yytext());
 
 	    "="		{System.out.println("lexema:" +yytext()+  " linea: " +yyline+" columna: "+yycolumn);
 	                      tokens.add(new Symbol(sym.SIG_IGUAL, yytext()));
@@ -163,9 +159,11 @@ public ArrayList<Symbol> tokens = new ArrayList<>();
           tokens.add(new Symbol(sym.COMA, yytext()));
                     return symbol(sym.COMA, yytext());}
 
-         "\*"        {System.out.println("lexema:" +yytext()+  " linea: " +yyline+" columna: "+yycolumn);
-          tokens.add(new Symbol(sym.ASTERISCO, yytext()));
-                    return symbol(sym.ASTERISCO, yytext());}
+"*"         {
+            System.out.println("lexema:" +yytext()+  " linea: " +yyline+" columna: "+yycolumn);
+            tokens.add(new Symbol(sym.ASTERISCO, yytext()));
+            return symbol(sym.ASTERISCO, yytext());
+            }
 
 "("         {System.out.println("lexema:" +yytext()+  " linea: " +yyline+" columna: "+yycolumn);
             tokens.add(new Symbol(sym.PARENA, yytext()));
@@ -174,6 +172,10 @@ public ArrayList<Symbol> tokens = new ArrayList<>();
 ")"         {System.out.println("lexema:" +yytext()+  " linea: " +yyline+" columna: "+yycolumn);
             tokens.add(new Symbol(sym.PARENC, yytext()));
             return symbol(sym.PARENC, yytext());}
+
+{nombreArchivo}	{System.out.println("lexema:" +yytext()+  " linea: " +yyline+" columna: "+yycolumn);
+	             tokens.add(new Symbol(sym.ARCHIVO, yytext()));
+                 return symbol(sym.ARCHIVO, yytext()); }
 
 	{WhiteSpace} 	{/* ignoramos */}
 
